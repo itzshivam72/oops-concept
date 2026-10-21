@@ -1,1 +1,1079 @@
 
+# Java Generics Explained Conceptually: From `int[]` to `Object[]`, Autoboxing, and `ClassCastException`
+
+## Introduction
+
+When learning Java Collections and Generics, many developers memorize the syntax without understanding what happens behind the scenes.
+
+For example, why do we write `Integer` instead of `int` in `ArrayList<Integer>`? Why does a custom generic array list use `Object[]`? Why can't we create `new T[10]`? And how can a `ClassCastException` occur even when we use generics?
+
+To answer these questions, we will build our understanding step by step, beginning with a normal integer array and gradually developing a custom generic array list.
+
+By the end, you should be able to explain these concepts to another person using examples rather than simply remembering definitions.
+
+---
+
+## 1. What Is an Array List, Conceptually?
+
+Imagine that you want to store five integers:
+
+`10, 20, 30, 40, 50`
+
+One simple way is to create an array:
+
+```java
+int[] numbers = new int[5];
+
+numbers[0] = 10;
+numbers[1] = 20;
+numbers[2] = 30;
+numbers[3] = 40;
+numbers[4] = 50;
+```
+
+An array gives us a fixed capacity. Once we create an array with five slots, we cannot increase its length directly.
+
+But what happens when we need to store more than five elements?
+
+One solution is to create a bigger array, copy the existing values into it, and replace the old array with the new one.
+
+This is the basic idea behind a dynamically resizing array list.
+
+A custom array list usually maintains two important things:
+
+- **Capacity:** The total number of available slots.
+- **Size:** The number of elements currently stored.
+
+For example, an array can have a capacity of 10 while containing only 3 meaningful elements.
+
+Capacity and size are not the same thing.
+
+---
+
+## 2. Building a Custom Array List Using `int[]`
+
+Let's start with a simplified version of a custom array list.
+
+```java
+import java.util.Arrays;
+
+public class CustomArrayList {
+
+    private int[] data;
+    private static final int DEFAULT_SIZE = 10;
+    private int size = 0;
+
+    public CustomArrayList() {
+        data = new int[DEFAULT_SIZE];
+    }
+
+    public void add(int num) {
+        if (size == data.length) {
+            resize();
+        }
+
+        data[size++] = num;
+    }
+
+    private void resize() {
+        int[] temp = new int[data.length * 2];
+
+        for (int i = 0; i < size; i++) {
+            temp[i] = data[i];
+        }
+
+        data = temp;
+    }
+
+    public int get(int index) {
+        if (index < 0 || index >= size) {
+            throw new IndexOutOfBoundsException();
+        }
+
+        return data[index];
+    }
+
+    public int size() {
+        return size;
+    }
+
+    @Override
+    public String toString() {
+        return "CustomArrayList{" +
+                "data=" + Arrays.toString(data) +
+                ", size=" + size +
+                '}';
+    }
+}
+```
+
+We have created a custom list that stores primitive integers.
+
+Let's understand the important declaration:
+
+```java
+private int[] data;
+```
+
+This means the internal array stores primitive `int` values.
+
+When we write:
+
+```java
+data = new int[10];
+```
+
+Java creates an integer array with 10 slots. Every slot initially contains `0`, because that is the default value for an `int` array.
+
+Now we can write:
+
+```java
+CustomArrayList list = new CustomArrayList();
+
+list.add(10);
+list.add(20);
+list.add(30);
+```
+
+The first three slots contain `10`, `20`, and `30`. The remaining slots still contain their default value of `0`.
+
+If we add more elements than the current capacity, the `resize()` method creates a larger array and copies the stored elements into it.
+
+For example, with an initial capacity of 10:
+
+- After adding 10 elements, the size is 10 and the capacity is 10.
+- Adding an 11th element triggers resizing.
+- The new capacity is 20.
+- After adding 14 elements, the size is 14 and the capacity is 20.
+
+This is how a dynamically resizing array list works at a basic level.
+
+## 3. Understanding `int` and `Integer`
+
+Now we reach an important question.
+
+Why does our custom array list use `int[]`, but Java's generic collections commonly use `Integer`?
+
+First, understand that `int` and `Integer` are different types.
+
+### `int`: A primitive type
+
+```java
+int number = 10;
+```
+
+`int` is a primitive data type that represents an integer value. It is not an object.
+
+### `Integer`: A wrapper class
+
+```java
+Integer number = 10;
+```
+
+`Integer` is a Java class that represents an integer value using an object.
+
+Java provides wrapper classes for primitive types:
+
+| Primitive type | Wrapper class |
+|---|---|
+| `byte` | `Byte` |
+| `short` | `Short` |
+| `int` | `Integer` |
+| `long` | `Long` |
+| `float` | `Float` |
+| `double` | `Double` |
+| `char` | `Character` |
+| `boolean` | `Boolean` |
+
+Why do these wrapper classes exist?
+
+They allow primitive values to be represented as objects, which is useful when working with APIs that require reference types, including generic collections.
+
+For example, Java's standard `ArrayList` cannot be declared like this:
+
+```java
+ArrayList<int> numbers = new ArrayList<>(); // Invalid
+```
+
+Instead, we write:
+
+```java
+ArrayList<Integer> numbers = new ArrayList<>();
+
+numbers.add(10);
+numbers.add(20);
+numbers.add(30);
+```
+
+Generics require reference types as type arguments, not primitive types.
+
+That is why we use `Integer` instead of `int`.
+
+---
+
+## 4. How Does Java Convert `int` to `Integer`?
+
+Consider this code:
+
+```java
+int a = 10;
+
+Integer b = a;
+```
+
+The first variable is an `int`, but the second expects an `Integer`.
+
+How does Java allow this assignment?
+
+The answer is **autoboxing**.
+
+Autoboxing is Java's automatic conversion from a primitive value to its corresponding wrapper type.
+
+Conceptually, Java handles the assignment like this:
+
+```java
+int a = 10;
+
+Integer b = Integer.valueOf(a);
+```
+
+The `Integer` class provides the `valueOf()` method, which returns an `Integer` representing the specified value.
+
+Java handles this conversion automatically in appropriate contexts, so we do not have to write the method call ourselves.
+
+The opposite process is called **unboxing**.
+
+```java
+Integer b = 20;
+
+int a = b;
+```
+
+Conceptually:
+
+```java
+int a = b.intValue();
+```
+
+Remember:
+
+- Autoboxing: `int` to `Integer`.
+- Unboxing: `Integer` to `int`.
+
+One subtle detail: Java may reuse cached `Integer` objects for certain values. Therefore, you should not assume that every autoboxing operation creates a brand-new object.
+
+---
+
+## 5. What Is an Object in Java?
+
+To understand generics properly, we also need to understand `Object`.
+
+Java has a class named `Object`, which is the root of the class hierarchy. Every ordinary Java class ultimately inherits from `Object`, directly or indirectly.
+
+For example, the inheritance relationship for `Integer` is:
+
+```text
+Object
+   |
+ Number
+   |
+ Integer
+```
+
+`Integer` extends `Number`, and `Number` extends `Object`.
+
+Therefore, an `Integer` object can be referenced through a variable declared as `Object`.
+
+```java
+Integer number = 10;
+
+Object value = number;
+```
+
+This is valid because an `Integer` is an `Object`.
+
+Now consider:
+
+```java
+Object value = 10;
+```
+
+This is also valid. The value `10` is an `int` literal, but Java autoboxes it to an `Integer` object to assign it to the `Object` variable.
+
+The important distinction is that an `Object` variable can refer to an `Integer` object without changing the actual object's class.
+
+```java
+Object value = 10;
+
+System.out.println(value.getClass().getName());
+```
+
+Output:
+
+```text
+java.lang.Integer
+```
+
+Although the variable is declared as `Object`, the actual object is an `Integer`.
+
+### Does every value in Java become an object?
+
+No.
+
+Primitive values such as `int`, `double`, and `boolean` are not objects. They can be converted to wrapper objects when needed.
+
+Arrays themselves are objects in Java, but the elements of an `int[]` are still primitive integers.
+
+For example:
+
+```java
+int[] numbers = new int[3];
+```
+
+Here, `numbers` refers to an array object, but its three elements are primitive `int` values.
+
+---
+
+## 6. Why Do We Use `Object[]` in a Generic Array List?
+
+Consider two declarations:
+
+```java
+private int[] data;
+```
+
+and:
+
+```java
+private Object[] data;
+```
+
+They serve different purposes.
+
+An `int[]` is specifically designed to store primitive integer values.
+
+An `Object[]` stores references to objects. Because different classes inherit from `Object`, the array can contain references to objects of different classes.
+
+For example:
+
+```java
+Object[] data = new Object[3];
+
+data[0] = "Hello";
+data[1] = 25;
+data[2] = 4.5;
+```
+
+In this example:
+
+- `"Hello"` is a `String` object.
+- `25` is autoboxed to an `Integer` object.
+- `4.5` is autoboxed to a `Double` object.
+
+All three can be referenced through `Object[]`.
+
+### What does `new Object[10]` actually create?
+
+This line:
+
+```java
+Object[] data = new Object[10];
+```
+
+creates one array object containing 10 slots for object references.
+
+It does **not** create 10 separate `Object` instances.
+
+Initially, all 10 slots contain `null`.
+
+Conceptually:
+
+```text
+data
+ |
+ v
++------+------+------+------+------+
+| null | null | null | null | null |
++------+------+------+------+------+
+| null | null | null | null | null |
++------+------+------+------+------+
+```
+
+After storing some values, the slots contain references to those objects:
+
+```java
+Object[] data = new Object[3];
+
+data[0] = "Hello";
+data[1] = 25;
+data[2] = 4.5;
+```
+
+The actual object types remain `String`, `Integer`, and `Double`.
+
+We use `Object[]` as an internal storage mechanism because it can hold references to different object types. In a generic class, the methods determine which type the caller is intended to use.
+
+---
+
+## 7. What Are Generics in Java?
+
+Generics allow us to write reusable classes and methods that work with different reference types while providing compile-time type checking.
+
+Imagine that we need separate storage classes for:
+
+- Integers
+- Strings
+- Doubles
+
+Without generics, we might create three different classes:
+
+```java
+class IntegerBox {
+    Integer value;
+}
+
+class StringBox {
+    String value;
+}
+
+class DoubleBox {
+    Double value;
+}
+```
+
+This repeats the same basic logic.
+
+With generics, we can create one reusable class:
+
+```java
+class Box<T> {
+    T value;
+}
+```
+
+Here, `T` is a type parameter. It acts as a placeholder for a type.
+
+We can then write:
+
+```java
+Box<Integer> integerBox = new Box<>();
+Box<String> stringBox = new Box<>();
+Box<Double> doubleBox = new Box<>();
+```
+
+The same class can be used with different types.
+
+Common type parameter names include:
+
+- `T`: Type
+- `E`: Element
+- `K`: Key
+- `V`: Value
+
+These are naming conventions, not special Java keywords.
+
+The real benefit is that the compiler can enforce the intended type.
+
+```java
+ArrayList<String> names = new ArrayList<>();
+
+names.add("Shivam");
+names.add("Kunal");
+
+// names.add(100); // Compile-time error
+```
+
+The list is intended to hold strings. Java therefore rejects an attempt to add an integer directly.
+
+Generics do not magically prevent every possible type error, but they make ordinary collection usage much safer.
+
+---
+
+## 8. Building a Generic Version of Our Custom Array List
+
+Now we can build a generic version of our custom array list.
+
+```java
+import java.util.Arrays;
+
+public class CustomGenArrayList<T> {
+
+    private Object[] data;
+    private static final int DEFAULT_SIZE = 10;
+    private int size = 0;
+
+    public CustomGenArrayList() {
+        data = new Object[DEFAULT_SIZE];
+    }
+
+    public void add(T value) {
+        if (size == data.length) {
+            resize();
+        }
+
+        data[size++] = value;
+    }
+
+    private void resize() {
+        Object[] temp = new Object[data.length * 2];
+
+        for (int i = 0; i < size; i++) {
+            temp[i] = data[i];
+        }
+
+        data = temp;
+    }
+
+    @SuppressWarnings("unchecked")
+    public T get(int index) {
+        if (index < 0 || index >= size) {
+            throw new IndexOutOfBoundsException();
+        }
+
+        return (T) data[index];
+    }
+
+    public int size() {
+        return size;
+    }
+
+    @Override
+    public String toString() {
+        return Arrays.toString(
+                Arrays.copyOf(data, size)
+        );
+    }
+}
+```
+
+Let's examine the key differences.
+
+### Difference 1: The class declares a type parameter
+
+```java
+public class CustomGenArrayList<T>
+```
+
+The type parameter `T` allows a caller to specify the type of elements the list is intended to handle.
+
+For example:
+
+```java
+CustomGenArrayList<Integer> numbers =
+        new CustomGenArrayList<>();
+
+CustomGenArrayList<String> names =
+        new CustomGenArrayList<>();
+```
+
+### Difference 2: The internal array uses `Object[]`
+
+```java
+private Object[] data;
+```
+
+Java does not permit directly creating an array of a type parameter:
+
+```java
+data = new T[10]; // Compile-time error
+```
+
+Why? The central reason is type erasure, which we will examine next.
+
+### Difference 3: The `add()` method uses `T`
+
+```java
+public void add(T value) {
+    if (size == data.length) {
+        resize();
+    }
+
+    data[size++] = value;
+}
+```
+
+For the intended use of this list:
+
+```java
+CustomGenArrayList<Integer> numbers =
+        new CustomGenArrayList<>();
+```
+
+The compiler checks the `add()` operation as accepting `Integer` values.
+
+This works:
+
+```java
+numbers.add(10);
+numbers.add(20);
+```
+
+This fails at compile time:
+
+```java
+// numbers.add("Hello");
+```
+
+The integer literals are autoboxed to `Integer` objects when passed to the method.
+
+### Difference 4: The `get()` method returns `T`
+
+```java
+public T get(int index) {
+    return (T) data[index];
+}
+```
+
+The array provides an element through an `Object` reference. The cast expresses that the method returns the element as type `T`.
+
+The cast is unchecked because Java cannot generally verify the original generic type parameter at runtime. Correct generic usage makes this cast safe, but misuse of the class can still cause runtime errors.
+
+---
+
+## 9. Why Can't We Write `new T[10]`?
+
+This is one of the most important questions in Java Generics.
+
+It may look logical to write:
+
+```java
+public class CustomGenArrayList<T> {
+
+    private T[] data;
+
+    public CustomGenArrayList() {
+        data = new T[10]; // Not allowed
+    }
+}
+```
+
+But the compiler rejects this code.
+
+The reason is **type erasure**.
+
+Java generics are implemented primarily through compile-time type checking, and the generic type parameter is erased to its bound in the compiled implementation. For an unbounded parameter such as `T`, that bound is `Object`.
+
+Consider these declarations:
+
+```java
+CustomGenArrayList<Integer> numbers =
+        new CustomGenArrayList<>();
+
+CustomGenArrayList<String> names =
+        new CustomGenArrayList<>();
+```
+
+The compiler checks how each list is used. However, Java cannot create an actual runtime array whose component type comes from the erased, unknown `T` by simply writing `new T[10]`.
+
+Array creation requires a runtime component type.
+
+An `Object[]`, on the other hand, has a known runtime component type and can be created directly:
+
+```java
+data = new Object[10];
+```
+
+That is why an `Object[]` backing array is a common approach when implementing a custom generic collection.
+
+The important qualification is that Java can retain generic type information in class-file metadata for some purposes. Type erasure does not mean every trace of generics disappears. It means the runtime representation of ordinary generic instances does not retain the type argument in the way required to create `new T[]`.
+
+---
+
+## 10. What Is Type Erasure?
+
+Type erasure is the process through which Java removes or translates generic type parameters in the compiled representation of generic code.
+
+For example, consider:
+
+```java
+class Box<T> {
+
+    T value;
+
+    void setValue(T value) {
+        this.value = value;
+    }
+
+    T getValue() {
+        return value;
+    }
+}
+```
+
+For an unbounded `T`, the compiled representation uses `Object` at the relevant erased type positions.
+
+Conceptually, it resembles:
+
+```java
+class Box {
+
+    Object value;
+
+    void setValue(Object value) {
+        this.value = value;
+    }
+
+    Object getValue() {
+        return value;
+    }
+}
+```
+
+This is an illustration of the erased representation, not the exact source code Java generates in every detail.
+
+The compiler still checks ordinary generic usage before compilation. Type erasure is part of how Java implements generics while maintaining compatibility with its existing runtime and bytecode model.
+
+This explains two important facts:
+
+1. The generic type parameter cannot simply be used to create an array with `new T[10]`.
+2. An unchecked cast can be accepted in a generic class even though incorrect data can cause a runtime failure later.
+
+---
+
+## 11. What Is `ClassCastException`?
+
+A `ClassCastException` is a runtime exception that occurs when Java attempts an invalid cast between incompatible reference types.
+
+Consider:
+
+```java
+Object value = 100;
+
+String text = (String) value;
+```
+
+This compiles, but it fails at runtime.
+
+Why?
+
+- The value `100` is autoboxed to an `Integer` object.
+- The variable `value` refers to that `Integer` object.
+- The cast requests a `String`.
+- An `Integer` object is not a `String` object.
+
+Java therefore throws a `ClassCastException`.
+
+A valid cast is:
+
+```java
+Object value = 100;
+
+Integer number = (Integer) value;
+
+System.out.println(number);
+```
+
+Output:
+
+```text
+100
+```
+
+If you wanted the number as text instead, you could convert it:
+
+```java
+Object value = 100;
+
+String text = String.valueOf(value);
+
+System.out.println(text);
+```
+
+Output:
+
+```text
+100
+```
+
+Notice the distinction:
+
+- Casting attempts to treat an existing object as another compatible type.
+- Conversion creates a representation in the target type, when a supported conversion exists.
+
+Casting an `Integer` object to `String` does not convert the integer into text.
+
+---
+
+## 12. How Can `ClassCastException` Happen in Our Generic Array List?
+
+Our generic class contains this method:
+
+```java
+public T get(int index) {
+    return (T) data[index];
+}
+```
+
+Suppose someone bypasses generic type checking using a raw type.
+
+```java
+CustomGenArrayList raw = new CustomGenArrayList();
+
+raw.add("Hello");
+
+CustomGenArrayList<Integer> numbers = raw;
+
+Integer value = numbers.get(0);
+
+System.out.println(value);
+```
+
+This code may compile with warnings about unchecked operations. It then throws a `ClassCastException` when the retrieved `String` is used as an `Integer`.
+
+Let's understand why.
+
+### Step 1: A raw type is used
+
+```java
+CustomGenArrayList raw = new CustomGenArrayList();
+```
+
+The declaration omits the type argument.
+
+This is called using a raw type. It bypasses the usual compile-time checks provided by generics.
+
+### Step 2: A string is inserted
+
+```java
+raw.add("Hello");
+```
+
+Because the list is being used as a raw type, Java does not enforce the intended `Integer` constraint at this point.
+
+The backing array stores a reference to the `String` object.
+
+### Step 3: The list is treated as an integer list
+
+```java
+CustomGenArrayList<Integer> numbers = raw;
+```
+
+This is an unchecked conversion. The compiler warns that it cannot verify the type safety of this assignment.
+
+### Step 4: The value is retrieved
+
+```java
+Integer value = numbers.get(0);
+```
+
+The generic method's type parameter is erased. The compiler can insert an `Integer` cast at the call site because the declared list type says that `get()` returns `Integer`.
+
+But the actual object is still a `String`.
+
+The runtime cast fails.
+
+This illustrates a critical lesson: **the unchecked cast `(T)` inside `get()` does not itself guarantee that the stored object matches the intended type argument.** For an unbounded `T`, the cast is effectively to its erased bound. An incompatible cast can fail later at the point where the caller expects the specific type.
+
+The best prevention is to use parameterized types consistently rather than raw types.
+
+---
+
+## 13. Why Doesn't `ClassCastException` Happen in Normal Generic Usage?
+
+Consider:
+
+```java
+CustomGenArrayList<Integer> numbers =
+        new CustomGenArrayList<>();
+
+numbers.add(10);
+numbers.add(20);
+numbers.add(30);
+
+Integer value = numbers.get(0);
+
+System.out.println(value);
+```
+
+Output:
+
+```text
+10
+```
+
+This works because the compiler checks the use of `numbers` as a list of `Integer` values.
+
+The following insertion is rejected at compile time:
+
+```java
+// numbers.add("Hello");
+```
+
+Java catches the mismatch before the program runs.
+
+Generics therefore help prevent many common type errors. They do not eliminate every possible runtime cast failure if someone bypasses their checks or deliberately uses unsafe code.
+
+---
+
+## 14. Comparing `int[]`, `Integer[]`, and `Object[]`
+
+These three array types are easy to confuse.
+
+| Feature | `int[]` | `Integer[]` | `Object[]` |
+|---|---|---|---|
+| Stores | Primitive `int` values | References to `Integer` objects | References to objects |
+| Default element value | `0` | `null` | `null` |
+| Accepts `String` objects directly | No | No | Yes |
+| Accepts `Integer` objects | Not as objects; unboxing is needed for an `int` assignment | Yes | Yes |
+| Can be created directly | `new int[10]` | `new Integer[10]` | `new Object[10]` |
+
+For example:
+
+```java
+int[] a = new int[3];
+Integer[] b = new Integer[3];
+Object[] c = new Object[3];
+```
+
+All three arrays are valid, but they store different kinds of elements.
+
+The first stores primitive integers. The second stores references to integer wrapper objects. The third stores references to objects of different possible types.
+
+Even when an `Integer` object is stored in an `Object[]`, the object remains an `Integer`. The array's declared component type does not change the actual class of the object.
+
+---
+
+## 15. How `ArrayList<Integer>` Connects Everything
+
+Now that we understand the underlying concepts, consider Java's standard collection:
+
+```java
+import java.util.ArrayList;
+
+public class Main {
+    public static void main(String[] args) {
+
+        ArrayList<Integer> numbers = new ArrayList<>();
+
+        numbers.add(10);
+        numbers.add(20);
+        numbers.add(30);
+
+        int value = numbers.get(0);
+
+        System.out.println(value);
+    }
+}
+```
+
+Output:
+
+```text
+10
+```
+
+Several things happen here:
+
+1. `ArrayList<Integer>` specifies that the list is intended to store `Integer` objects.
+2. `numbers.add(10)` autoboxes the primitive integer into an `Integer`.
+3. The collection stores the reference to the `Integer` object internally.
+4. `numbers.get(0)` returns an `Integer` through the generic API.
+5. Assigning the returned value to `int` triggers unboxing.
+
+You do not need to manually write `Integer.valueOf(10)` or `intValue()` in this example. Java handles the conversions.
+
+The internal implementation of `ArrayList` is a library implementation detail. We should not assume that every Java collection uses precisely the same internal storage strategy as our educational custom class.
+
+---
+
+## 16. Important Improvements to Our Custom Array List
+
+Our simple implementation explains the concepts, but a production-quality collection needs more care.
+
+For example, a complete implementation should:
+
+- Check whether an index is valid before getting or setting an element.
+- Handle removing an element from an empty list.
+- Clear removed object references when appropriate so unused slots do not unnecessarily retain objects.
+- Copy only the meaningful elements when resizing.
+- Decide how `toString()` should represent stored elements versus unused capacity.
+- Avoid raw types and unchecked operations wherever possible.
+
+Also remember that an `Object[]` can store references to different object types. That capability alone does not make a list type-safe. The generic class's API, together with correct usage, provides the intended type checking.
+
+---
+
+## 17. A Conceptual Summary
+
+Let's connect the entire chain.
+
+When we write:
+
+```java
+CustomGenArrayList<Integer> numbers =
+        new CustomGenArrayList<>();
+
+numbers.add(10);
+```
+
+the process is:
+
+1. **Generics:** `Integer` is the intended element type.
+2. **Autoboxing:** The primitive `10` is converted to an `Integer` object.
+3. **Object inheritance:** `Integer` is a subclass of `Object`, so it can be stored in an `Object[]`.
+4. **Internal storage:** The backing array stores a reference to the object.
+5. **Type erasure:** The type parameter `T` is erased to its bound in the relevant compiled representation.
+6. **Retrieval:** `get()` returns the element through the generic API, with the compiler supplying the appropriate cast where necessary.
+7. **Type safety:** When the list is used correctly, the compiler helps prevent incompatible values from being inserted.
+
+The crucial distinction is that `Object[]` describes how the values are stored, while `T` describes the type the generic API is intended to accept and return.
+
+---
+
+## 18. Interview Questions and Answers
+
+### Q1. What are generics in Java?
+
+Generics allow classes, interfaces, and methods to operate on parameterized types while providing compile-time type checking.
+
+### Q2. Why do we use `Integer` instead of `int` in `ArrayList<Integer>`?
+
+Java's generic type arguments must be reference types, so primitive types cannot be used directly. `Integer` is the wrapper class for `int`.
+
+### Q3. What is autoboxing?
+
+Autoboxing is Java's automatic conversion from a primitive value to its corresponding wrapper type, such as `int` to `Integer`.
+
+### Q4. Why can an `Integer` be stored in an `Object[]`?
+
+Because `Integer` extends `Number`, and `Number` extends `Object`. An `Object[]` can hold a reference to an `Integer` object.
+
+### Q5. Does `new Object[10]` create 10 objects?
+
+No. It creates one array object with 10 slots for object references. Every slot initially contains `null`.
+
+### Q6. Why can't we write `new T[10]` in a generic class?
+
+Because the runtime component type required for array creation cannot be obtained directly from an erased type parameter `T`. An array of a known type, such as `Object[]`, can be created.
+
+### Q7. What is type erasure?
+
+Type erasure is the mechanism through which generic type parameters are erased to their bounds in the compiled representation. The compiler still performs generic type checking before compilation.
+
+### Q8. What is `ClassCastException`?
+
+It is a runtime exception thrown when Java attempts to cast an object to an incompatible reference type.
+
+### Q9. Can generics prevent `ClassCastException`?
+
+Generics prevent many such errors during compilation when used correctly. Raw types, unchecked conversions, and unsafe casts can bypass those protections and cause runtime failures.
+
+### Q10. What is the difference between size and capacity?
+
+Capacity is the number of slots currently allocated. Size is the number of elements currently stored.
+
+---
+
+## Conclusion
+
+Understanding Java Generics becomes much easier when we build the concepts in the right order.
+
+First, learn how arrays store values and why dynamic arrays need resizing. Next, understand the difference between primitive types and wrapper classes. Then learn how autoboxing converts values when an object is required, and how Java's `Object` class provides a common reference type for objects.
+
+Finally, connect those ideas to generics and type erasure.
+
+The most important sentence to remember is:
+
+**`int[]` stores primitive integers, `Object[]` stores references to objects, and `T` allows a generic class to express the intended element type through its API.**
+
+That is the conceptual foundation of the custom generic array list you built.
